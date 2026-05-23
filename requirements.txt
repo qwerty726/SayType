@@ -1,0 +1,11 @@
+PyQt6>=6.5.0
+sounddevice>=0.4.6
+numpy>=1.24.0
+keyboard>=0.13.5
+pyperclip>=1.8.2
+pyautogui>=0.9.54
+funasr>=1.0.0
+modelscope>=1.9.0
+torch>=2.0.0
+torchaudio>=2.0.0
+requests>=2.31.0

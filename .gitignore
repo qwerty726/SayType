@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+.eggs/
+build/
+dist/
+*.spec
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Local config / runtime
+*.log
+*.wav
+*.mp3
+.cache/
+
+# User-level config (contains API keys when filled)
+config.json
+config.local.json
+
+# FunASR / modelscope local model cache, if dropped here
+models/
+checkpoints/
+*.pt
+*.bin
+*.onnx
+
+# PyInstaller output
+*.exe
+
+# Claude Code local settings (machine-specific)
+.claude/
