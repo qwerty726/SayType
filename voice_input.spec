@@ -4,42 +4,49 @@
 Build with:
     pyinstaller voice_input.spec --clean --noconfirm
 
-Output: dist/SayType/SayType.exe  (onedir mode, ~1.5-3 GB depending on torch)
+Output: dist/SayType/SayType.exe  (onedir mode)
 
 Notes
 -----
-- We use onedir (not onefile) because:
-    * Startup is far faster (no unpack to temp on every launch)
-    * torch + FunASR are huge; onefile bloats RAM and disk I/O
-- FunASR models are *not* bundled. They auto-download to
-  ~/.cache/modelscope/ on first run. Bundling them would add ~500 MB
-  per model and break model updates.
-- `collect_all` grabs every submodule, data file, and binary for the
-  packages that use dynamic imports - this is what makes torch / funasr
-  actually runnable inside the bundle.
+- onedir, not onefile: torch+FunASR are huge; onefile unpacks to temp
+  on every launch which is slow and RAM-hungry.
+- FunASR models are NOT bundled. They download to ~/.cache/modelscope/
+  on first run (~800 MB total for the streaming pipeline).
+- collect_all is used ONLY for packages without a reliable PyInstaller
+  hook (torch / funasr / modelscope). PyQt6 / sounddevice have working
+  built-in hooks and over-collecting them tends to cause DLL conflicts
+  like "ImportError: DLL load failed while importing QtCore:
+  找不到指定的程序" (the loaded Qt DLL is missing a symbol the bundle
+  expects, usually because two Qt copies got merged).
 """
 from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 block_cipher = None
 
-# Heavy dynamic-import packages. collect_all returns (datas, binaries, hiddenimports).
-_collected = {}
-for pkg in ("torch", "torchaudio", "funasr", "modelscope", "sounddevice", "PyQt6"):
-    try:
-        datas, binaries, hiddenimports = collect_all(pkg)
-        _collected[pkg] = (datas, binaries, hiddenimports)
-    except Exception:
-        _collected[pkg] = ([], [], [])
-
 extra_datas = []
 extra_binaries = []
 extra_hidden = []
-for d, b, h in _collected.values():
-    extra_datas += d
-    extra_binaries += b
-    extra_hidden += h
 
+# Heavy ML packages: dynamic imports demand collect_all.
+for pkg in ("torch", "torchaudio", "funasr", "modelscope"):
+    try:
+        datas, binaries, hiddenimports = collect_all(pkg)
+        extra_datas += datas
+        extra_binaries += binaries
+        extra_hidden += hiddenimports
+    except Exception:
+        pass
+
+# PyQt6 and sounddevice: rely on PyInstaller's built-in hooks; only add
+# the submodules we actually import as explicit hidden imports so the
+# hook is forced to include them.
 extra_hidden += [
+    "PyQt6.sip",
+    "PyQt6.QtCore",
+    "PyQt6.QtGui",
+    "PyQt6.QtWidgets",
+    "sounddevice",
+    "_sounddevice",
     "keyboard",
     "pyperclip",
     "pyautogui",
@@ -48,7 +55,6 @@ extra_hidden += [
     "numpy",
     "requests",
 ]
-extra_hidden += collect_submodules("scipy")
 
 a = Analysis(
     ["main.py"],
@@ -58,8 +64,16 @@ a = Analysis(
     hiddenimports=extra_hidden,
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[],
+    runtime_hooks=["pyi_rth_dll_path.py"],
     excludes=[
+        # Aggressively keep out anything that could ship a competing Qt.
+        "PyQt5",
+        "PyQt5.QtCore",
+        "PySide2",
+        "PySide6",
+        "shiboken2",
+        "shiboken6",
+        # Heavy unused libs that PyInstaller might otherwise drag in.
         "matplotlib",
         "pandas",
         "tensorflow",
@@ -68,9 +82,6 @@ a = Analysis(
         "tkinter",
         "test",
         "tests",
-        "PyQt5",
-        "PySide2",
-        "PySide6",
     ],
     noarchive=False,
     cipher=block_cipher,
@@ -87,8 +98,8 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=False,           # UPX often breaks torch DLLs; keep off
-    console=False,       # windowed app
+    upx=False,           # UPX is notorious for breaking torch / Qt DLLs
+    console=False,       # windowed (tray) app
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
