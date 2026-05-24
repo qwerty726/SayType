@@ -9,7 +9,7 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 
 DEFAULTS: dict[str, Any] = {
     "hotkey": "f2",
-    "asr_backend": "funasr_local",      # funasr_local | xunfei | aliyun
+    "asr_backend": "funasr_streaming",   # funasr_streaming | funasr_local | xunfei_cloud
     "sample_rate": 16000,
     "auto_punctuation": True,
     "llm_polish_enabled": False,

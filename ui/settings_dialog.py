@@ -20,14 +20,24 @@ class SettingsDialog(QDialog):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("语音输入法 - 设置")
-        self.resize(440, 360)
+        self.resize(480, 480)
 
         self.hotkey_edit = QLineEdit(config.get("hotkey"))
         self.hotkey_edit.setPlaceholderText("例如: f2, ctrl+space")
 
         self.backend_combo = QComboBox()
-        self.backend_combo.addItems(["funasr_local"])
-        self.backend_combo.setCurrentText(config.get("asr_backend"))
+        self._backend_values = ["funasr_streaming", "funasr_local", "xunfei_cloud"]
+        self._backend_labels = [
+            "本地 FunASR 流式 (推荐，边说边出字)",
+            "本地 FunASR 离线 (整句识别，最稳)",
+            "讯飞云端 (需配置 APPID/APIKey/APISecret)",
+        ]
+        self.backend_combo.addItems(self._backend_labels)
+        try:
+            idx = self._backend_values.index(config.get("asr_backend"))
+        except ValueError:
+            idx = 0
+        self.backend_combo.setCurrentIndex(idx)
 
         self.cmds_check = QCheckBox("启用语音指令 (换行/句号/删除 等)")
         self.cmds_check.setChecked(config.get("voice_commands_enabled"))
@@ -45,6 +55,15 @@ class SettingsDialog(QDialog):
         self.vocab_edit = QLineEdit(", ".join(config.get("custom_vocabulary") or []))
         self.vocab_edit.setPlaceholderText("逗号分隔的专业术语，例如: FunASR, Paraformer")
 
+        # Xunfei credentials.
+        self.xf_app_id_edit = QLineEdit(config.get("xunfei_app_id"))
+        self.xf_app_id_edit.setPlaceholderText("讯飞控制台 -> 应用 -> APPID")
+        self.xf_api_key_edit = QLineEdit(config.get("xunfei_api_key"))
+        self.xf_api_key_edit.setPlaceholderText("APIKey")
+        self.xf_api_secret_edit = QLineEdit(config.get("xunfei_api_secret"))
+        self.xf_api_secret_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        self.xf_api_secret_edit.setPlaceholderText("APISecret")
+
         form = QFormLayout()
         form.addRow("全局热键 (按住说话):", self.hotkey_edit)
         form.addRow("ASR 引擎:", self.backend_combo)
@@ -54,6 +73,9 @@ class SettingsDialog(QDialog):
         form.addRow("LLM Base URL:", self.base_url_edit)
         form.addRow("LLM Model:", self.model_edit)
         form.addRow("自定义词库:", self.vocab_edit)
+        form.addRow("讯飞 APPID:", self.xf_app_id_edit)
+        form.addRow("讯飞 APIKey:", self.xf_api_key_edit)
+        form.addRow("讯飞 APISecret:", self.xf_api_secret_edit)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
@@ -67,7 +89,7 @@ class SettingsDialog(QDialog):
 
     def _save_and_close(self) -> None:
         config.set("hotkey", self.hotkey_edit.text().strip() or "f2")
-        config.set("asr_backend", self.backend_combo.currentText())
+        config.set("asr_backend", self._backend_values[self.backend_combo.currentIndex()])
         config.set("voice_commands_enabled", self.cmds_check.isChecked())
         config.set("llm_polish_enabled", self.polish_check.isChecked())
         config.set("llm_api_key", self.api_key_edit.text().strip())
@@ -75,4 +97,7 @@ class SettingsDialog(QDialog):
         config.set("llm_model", self.model_edit.text().strip())
         vocab = [v.strip() for v in self.vocab_edit.text().split(",") if v.strip()]
         config.set("custom_vocabulary", vocab)
+        config.set("xunfei_app_id", self.xf_app_id_edit.text().strip())
+        config.set("xunfei_api_key", self.xf_api_key_edit.text().strip())
+        config.set("xunfei_api_secret", self.xf_api_secret_edit.text().strip())
         self.accept()
