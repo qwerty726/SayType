@@ -42,6 +42,7 @@ from asr.funasr_streaming import FunASRStreaming
 from asr.xunfei_cloud import XunfeiCloud
 from injector.text_injector import inject_text
 from postprocess.commands import parse_command
+from postprocess.history import append_history
 from postprocess.llm_polish import polish
 from ui.floating_bar import FloatingBar
 from ui.settings_dialog import SettingsDialog
@@ -238,6 +239,8 @@ class Controller(QObject):
                 return
 
         # 2) Optional LLM polish.
+        original = text
+        polished: str | None = None
         if config.get("llm_polish_enabled") and config.get("llm_api_key"):
             text = polish(
                 text,
@@ -245,6 +248,9 @@ class Controller(QObject):
                 base_url=config.get("llm_base_url"),
                 model=config.get("llm_model"),
             )
+            polished = text
+
+        append_history(original, polished, backend=config.get("asr_backend"))
 
         self.sig_inject.emit(text)
 
