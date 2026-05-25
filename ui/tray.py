@@ -29,12 +29,14 @@ class TrayIcon(QSystemTrayIcon):
         self,
         on_toggle_enabled: Callable[[bool], None],
         on_open_settings: Callable[[], None],
+        on_open_history: Callable[[], None],
         on_quit: Callable[[], None],
         hotkey: str,
     ) -> None:
         super().__init__(_make_icon())
         self._on_toggle_enabled = on_toggle_enabled
         self._on_open_settings = on_open_settings
+        self._on_open_history = on_open_history
         self._on_quit = on_quit
         self.setToolTip(f"语音输入法 - 按住 [{hotkey.upper()}] 说话")
 
@@ -49,6 +51,10 @@ class TrayIcon(QSystemTrayIcon):
         settings_action = QAction("设置...", self)
         settings_action.triggered.connect(self._on_open_settings)
         menu.addAction(settings_action)
+
+        history_action = QAction("历史...", self)
+        history_action.triggered.connect(self._on_open_history)
+        menu.addAction(history_action)
 
         menu.addSeparator()
         quit_action = QAction("退出", self)

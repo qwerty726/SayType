@@ -31,7 +31,7 @@ os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
 os.environ.setdefault("MODELSCOPE_LOG_LEVEL", "40")
 
 import keyboard
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
 from config import config
@@ -45,6 +45,7 @@ from postprocess.commands import parse_command
 from postprocess.history import append_history
 from postprocess.llm_polish import polish
 from ui.floating_bar import FloatingBar
+from ui.history_dialog import HistoryDialog
 from ui.settings_dialog import SettingsDialog
 from ui.tray import TrayIcon
 
@@ -71,6 +72,7 @@ class Controller(QObject):
         self.tray = TrayIcon(
             on_toggle_enabled=self._on_toggle_enabled,
             on_open_settings=self._open_settings,
+            on_open_history=self._open_history,
             on_quit=self._quit,
             hotkey=config.get("hotkey"),
         )
@@ -290,6 +292,17 @@ class Controller(QObject):
                     self.asr.warmup_async()
             self._register_hotkey()
             self.tray.set_hotkey_label(config.get("hotkey"))
+
+    def _open_history(self) -> None:
+        dlg = HistoryDialog()
+        if dlg.exec() and dlg.text_to_inject:
+            # Delay so the OS hands focus back to the previously-active app
+            # before we send Ctrl+V; otherwise the paste lands nowhere useful.
+            text = dlg.text_to_inject
+            QTimer.singleShot(
+                200,
+                lambda: inject_text(text, method=config.get("inject_method")),
+            )
 
     def _quit(self) -> None:
         try:

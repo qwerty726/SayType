@@ -58,3 +58,39 @@ def _prune_if_needed() -> None:
             f.writelines(tail)
     except OSError as e:
         print(f"[history] prune failed: {e}", file=sys.stderr)
+
+
+def read_history(limit: int | None = None) -> list[dict]:
+    """Return history records, newest first. Returns [] on missing/unreadable file."""
+    if not HISTORY_FILE.exists():
+        return []
+    with _lock:
+        try:
+            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+        except OSError as e:
+            print(f"[history] read failed: {e}", file=sys.stderr)
+            return []
+
+    records: list[dict] = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            records.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+
+    if limit is not None and limit > 0:
+        records = records[-limit:]
+    return list(reversed(records))
+
+
+def clear_history() -> None:
+    """Delete the history file. Missing file is a no-op."""
+    with _lock:
+        try:
+            HISTORY_FILE.unlink(missing_ok=True)
+        except OSError as e:
+            print(f"[history] clear failed: {e}", file=sys.stderr)
