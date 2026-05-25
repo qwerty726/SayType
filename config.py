@@ -23,6 +23,9 @@ DEFAULTS: dict[str, Any] = {
     "xunfei_app_id": "",
     "xunfei_api_key": "",
     "xunfei_api_secret": "",
+    "history_enabled": True,
+    "history_max": 500,
+    "history_record_polish": True,
 }
 
 
