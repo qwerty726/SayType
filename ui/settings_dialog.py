@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QLineEdit,
+    QSpinBox,
     QVBoxLayout,
 )
 
@@ -64,6 +65,19 @@ class SettingsDialog(QDialog):
         self.xf_api_secret_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.xf_api_secret_edit.setPlaceholderText("APISecret")
 
+        # History persistence.
+        self.history_check = QCheckBox("保存识别历史到 ~/.voice_input/history.jsonl")
+        self.history_check.setChecked(config.get("history_enabled"))
+
+        self.history_max_spin = QSpinBox()
+        self.history_max_spin.setRange(10, 100000)
+        self.history_max_spin.setSingleStep(50)
+        self.history_max_spin.setSuffix(" 条")
+        self.history_max_spin.setValue(int(config.get("history_max") or 500))
+
+        self.history_polish_check = QCheckBox("同时记录 LLM 润色后文本 (仅润色启用时生效)")
+        self.history_polish_check.setChecked(config.get("history_record_polish"))
+
         form = QFormLayout()
         form.addRow("全局热键 (按住说话):", self.hotkey_edit)
         form.addRow("ASR 引擎:", self.backend_combo)
@@ -76,6 +90,9 @@ class SettingsDialog(QDialog):
         form.addRow("讯飞 APPID:", self.xf_app_id_edit)
         form.addRow("讯飞 APIKey:", self.xf_api_key_edit)
         form.addRow("讯飞 APISecret:", self.xf_api_secret_edit)
+        form.addRow(self.history_check)
+        form.addRow("历史保留上限:", self.history_max_spin)
+        form.addRow(self.history_polish_check)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
@@ -100,4 +117,7 @@ class SettingsDialog(QDialog):
         config.set("xunfei_app_id", self.xf_app_id_edit.text().strip())
         config.set("xunfei_api_key", self.xf_api_key_edit.text().strip())
         config.set("xunfei_api_secret", self.xf_api_secret_edit.text().strip())
+        config.set("history_enabled", self.history_check.isChecked())
+        config.set("history_max", self.history_max_spin.value())
+        config.set("history_record_polish", self.history_polish_check.isChecked())
         self.accept()
